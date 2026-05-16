@@ -308,7 +308,7 @@
 //  Fill in your token and source-layer names before deploying.
 // ═══════════════════════════════════════════════════════════════════════
 
-const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN_HERE';
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hhd25qcyIsImEiOiJjbXA4amU2ZTkwZDQ2MnhwdHpjbWFoMWQ4In0.J--HcwXZaW7o-30sDd2Aqw';
 
 // Your uploaded tileset IDs
 const TILESETS = {
@@ -323,23 +323,23 @@ const TILESETS = {
 // Source-layer names inside each tileset.
 // Find them in Mapbox Studio → Tilesets → click a tileset → scroll to "Layers" section.
 const SOURCE_LAYERS = {
-  nc:            'LA_City_Neighborhood_Councils', // confirmed from shapefile
-  cityCouncil:   'FILL_IN_FROM_STUDIO',
-  countyBod:     'FILL_IN_FROM_STUDIO',
-  congressional: 'FILL_IN_FROM_STUDIO',
-  assembly:      'FILL_IN_FROM_STUDIO',
-  senate:        'FILL_IN_FROM_STUDIO'
+  nc:            'LA_Neighbhorhood_Council-4c7cvi', // confirmed from shapefile
+  cityCouncil:   'LA_City_Council-5ps0sb',
+  countyBod:     'LA_County_BoD-4yfvkt',
+  congressional: 'CA_Congressional-4tx61z',
+  assembly:      'CA_State_Assembly-1kblxw',
+  senate:        'CA_State_Senate-bnb84k'
 };
 
 // The attribute field that holds the district's display name.
 // Check your data in Studio: click a tileset → "View data" tab shows feature properties.
 const NAME_FIELDS = {
   nc:            'name',      // value: 'EAGLE ROCK NC'
-  cityCouncil:   'FILL_IN',   // e.g. 'DISTRICT', 'NAME', 'CD'
-  countyBod:     'FILL_IN',   // e.g. 'DISTRICT', 'NAME', 'SUPERVISOR'
-  congressional: 'FILL_IN',   // e.g. 'NAMELSAD' if Census TIGER; check redistricting commission files
-  assembly:      'FILL_IN',   // same note
-  senate:        'FILL_IN'    // same note
+  cityCouncil:   'district',   // e.g. 'DISTRICT', 'NAME', 'CD'
+  countyBod:     'district',   // e.g. 'DISTRICT', 'NAME', 'SUPERVISOR'
+  congressional: 'district',   // e.g. 'NAMELSAD' if Census TIGER; check redistricting commission files
+  assembly:      'district',   // same note
+  senate:        'district'    // same note
 };
 
 // Human-readable labels for popups
