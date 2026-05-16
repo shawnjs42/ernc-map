@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eagle Rock NC · District Map</title>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ernc-red:    #E84E38;
+      --ernc-green:  #155e14;
+      --ernc-cream:  #FFFDF1;
+      --charcoal:    #1e1b18;
+      --slate:       #5a5550;
+      --border:      #ddd8d0;
+
+      --city:        #2563EB;
+      --county:      #7C3AED;
+      --congress:    #b91c1c;
+      --assembly:    #b45309;
+      --senate:      #0D9488;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--charcoal);
+    }
+
+    /* ── Layout ── */
+    #map {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* ── Controls panel ── */
+    #controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 230px;
+      background: var(--ernc-cream);
+      border-radius: 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .panel-header {
+      background: var(--charcoal);
+      color: var(--ernc-cream);
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 2px solid var(--ernc-red);
+    }
+
+    .panel-header h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 0.92rem;
+      font-weight: 400;
+      line-height: 1.2;
+    }
+
+    .panel-header h1 span {
+      display: block;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 300;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-top: 1px;
+    }
+
+    .chevron {
+      font-size: 0.6rem;
+      color: #888;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .chevron.up { transform: rotate(180deg); }
+
+    .panel-body {
+      padding: 12px 14px 14px;
+    }
+
+    .panel-body.hidden { display: none; }
+
+    /* ── Always-on boundary ── */
+    .boundary-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 3px 0 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+
+    .swatch-box {
+      width: 22px;
+      height: 13px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: rgba(232, 78, 56, 0.18);
+      border: 2px solid var(--ernc-red);
+    }
+
+    .boundary-label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--charcoal);
+      line-height: 1.2;
+    }
+
+    .boundary-label small {
+      display: block;
+      font-size: 0.66rem;
+      font-weight: 300;
+      color: var(--slate);
+    }
+
+    /* ── Section headings ── */
+    .section-title {
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--slate);
+      margin-bottom: 7px;
+    }
+
+    /* ── Radio options ── */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 7px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .radio-option:hover { background: rgba(0,0,0,0.04); }
+
+    .radio-option.active { background: rgba(0,0,0,0.06); }
+
+    .radio-option input[type="radio"] {
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border: 1.5px solid #bbb;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .radio-option input[type="radio"]:checked {
+      border-color: var(--active-color, #333);
+      background: var(--active-color, #333);
+      box-shadow: inset 0 0 0 2.5px var(--ernc-cream);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .radio-option label {
+      font-size: 0.78rem;
+      color: var(--charcoal);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* ── Popup ── */
+    .mapboxgl-popup-content {
+      font-family: 'DM Sans', sans-serif;
+      border-radius: 7px;
+      padding: 11px 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+    }
+
+    .popup-name {
+      font-weight: 500;
+      font-size: 0.88rem;
+      color: var(--charcoal);
+      margin-bottom: 3px;
+    }
+
+    .popup-type {
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--slate);
+    }
+
+    /* ── Mapbox control tweaks ── */
+    .mapboxgl-ctrl-top-left { top: 12px; left: 12px; }
+
+    /* ── Mobile ── */
+    @media (max-width: 580px) {
+      #controls {
+        top: auto;
+        bottom: 36px;
+        right: 8px;
+        left: 8px;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="controls">
+  <div class="panel-header" id="panel-toggle">
+    <h1>Eagle Rock NC <span>District Map</span></h1>
+    <span class="chevron up" id="chevron">▲</span>
+  </div>
+  <div class="panel-body" id="panel-body">
+
+    <!-- Always-on boundary -->
+    <div class="boundary-row">
+      <div class="swatch-box"></div>
+      <div class="boundary-label">
+        Neighborhood Council
+        <small>Always visible</small>
+      </div>
+    </div>
+
+    <!-- Who represents me -->
+    <div class="section-title">Who Represents Me</div>
+    <div class="radio-group">
+
+      <label class="radio-option active" for="r-none">
+        <input type="radio" name="represent" id="r-none" value="none" checked
+               style="--active-color: #555;">
+        <span class="dot" style="background:#ddd; border:1px solid #bbb;"></span>
+        <span>None</span>
+      </label>
+
+      <label class="radio-option" for="r-city">
+        <input type="radio" name="represent" id="r-city" value="cityCouncil"
+               style="--active-color: var(--city);">
+        <span class="dot" style="background: var(--city);"></span>
+        <span>LA City Council</span>
+      </label>
+
+      <label class="radio-option" for="r-county">
+        <input type="radio" name="represent" id="r-county" value="countyBod"
+               style="--active-color: var(--county);">
+        <span class="dot" style="background: var(--county);"></span>
+        <span>County Supervisor</span>
+      </label>
+
+      <label class="radio-option" for="r-congress">
+        <input type="radio" name="represent" id="r-congress" value="congressional"
+               style="--active-color: var(--congress);">
+        <span class="dot" style="background: var(--congress);"></span>
+        <span>US House</span>
+      </label>
+
+      <label class="radio-option" for="r-assembly">
+        <input type="radio" name="represent" id="r-assembly" value="assembly"
+               style="--active-color: var(--assembly);">
+        <span class="dot" style="background: var(--assembly);"></span>
+        <span>CA Assembly</span>
+      </label>
+
+      <label class="radio-option" for="r-senate">
+        <input type="radio" name="represent" id="r-senate" value="senate"
+               style="--active-color: var(--senate);">
+        <span class="dot" style="background: var(--senate);"></span>
+        <span>CA Senate</span>
+      </label>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  CONFIGURATION
+//  Fill in your token and source-layer names before deploying.
+// ═══════════════════════════════════════════════════════════════════════
+
+const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN_HERE';
+
+// Your uploaded tileset IDs
+const TILESETS = {
+  nc:            'shawnjs.947wac47',
+  cityCouncil:   'shawnjs.a0l435xo',
+  countyBod:     'shawnjs.bp7khkbi',
+  congressional: 'shawnjs.27u0lrb5',
+  assembly:      'shawnjs.1or4vwo2',
+  senate:        'shawnjs.4o0qoysq'
+};
+
+// Source-layer names inside each tileset.
+// Find them in Mapbox Studio → Tilesets → click a tileset → scroll to "Layers" section.
+const SOURCE_LAYERS = {
+  nc:            'LA_City_Neighborhood_Councils', // confirmed from shapefile
+  cityCouncil:   'FILL_IN_FROM_STUDIO',
+  countyBod:     'FILL_IN_FROM_STUDIO',
+  congressional: 'FILL_IN_FROM_STUDIO',
+  assembly:      'FILL_IN_FROM_STUDIO',
+  senate:        'FILL_IN_FROM_STUDIO'
+};
+
+// The attribute field that holds the district's display name.
+// Check your data in Studio: click a tileset → "View data" tab shows feature properties.
+const NAME_FIELDS = {
+  nc:            'name',      // value: 'EAGLE ROCK NC'
+  cityCouncil:   'FILL_IN',   // e.g. 'DISTRICT', 'NAME', 'CD'
+  countyBod:     'FILL_IN',   // e.g. 'DISTRICT', 'NAME', 'SUPERVISOR'
+  congressional: 'FILL_IN',   // e.g. 'NAMELSAD' if Census TIGER; check redistricting commission files
+  assembly:      'FILL_IN',   // same note
+  senate:        'FILL_IN'    // same note
+};
+
+// Human-readable labels for popups
+const LAYER_LABELS = {
+  cityCouncil:   'LA City Council District',
+  countyBod:     'LA County Supervisorial District',
+  congressional: 'US House District',
+  assembly:      'CA Assembly District',
+  senate:        'CA Senate District'
+};
+
+// Colors (match CSS variables above)
+const COLORS = {
+  nc:            '#E84E38',
+  cityCouncil:   '#2563EB',
+  countyBod:     '#7C3AED',
+  congressional: '#b91c1c',
+  assembly:      '#b45309',
+  senate:        '#0D9488'
+};
+
+// Default view — Eagle Rock
+// When scaling to other NCs, add a lookup table here: NC name → [lng, lat, zoom]
+const DEFAULT_NC     = 'EAGLE ROCK NC';
+const DEFAULT_CENTER = [-118.2077, 34.1366];
+const DEFAULT_ZOOM   = 13.2;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════════════════════════════════
+
+// Read ?nc= from the URL (for future multi-NC scaling)
+const params   = new URLSearchParams(window.location.search);
+const targetNC = (params.get('nc') || DEFAULT_NC).trim();
+
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style:     'mapbox://styles/mapbox/light-v11',
+  center:    DEFAULT_CENTER,
+  zoom:      DEFAULT_ZOOM
+});
+
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LAYERS
+// ═══════════════════════════════════════════════════════════════════════
+
+map.on('load', () => {
+
+  // ── Neighborhood Councils ────────────────────────────────────────────
+
+  map.addSource('nc', {
+    type: 'vector',
+    url:  `mapbox://${TILESETS.nc}`
+  });
+
+  // All NC boundaries — faint grey outline for context
+  map.addLayer({
+    id:             'nc-all-line',
+    type:           'line',
+    source:         'nc',
+    'source-layer': SOURCE_LAYERS.nc,
+    paint: {
+      'line-color':   '#999',
+      'line-width':   0.5,
+      'line-opacity': 0.4
+    }
+  });
+
+  // Highlighted NC fill
+  map.addLayer({
+    id:             'nc-highlight-fill',
+    type:           'fill',
+    source:         'nc',
+    'source-layer': SOURCE_LAYERS.nc,
+    filter:         ['==', ['get', NAME_FIELDS.nc], targetNC],
+    paint: {
+      'fill-color':   COLORS.nc,
+      'fill-opacity': 0.12
+    }
+  });
+
+  // Highlighted NC border
+  map.addLayer({
+    id:             'nc-highlight-line',
+    type:           'line',
+    source:         'nc',
+    'source-layer': SOURCE_LAYERS.nc,
+    filter:         ['==', ['get', NAME_FIELDS.nc], targetNC],
+    paint: {
+      'line-color': COLORS.nc,
+      'line-width': 2.5
+    }
+  });
+
+  // ── District layers (all hidden by default) ──────────────────────────
+
+  const DISTRICT_KEYS = ['cityCouncil', 'countyBod', 'congressional', 'assembly', 'senate'];
+
+  DISTRICT_KEYS.forEach(key => {
+
+    map.addSource(key, {
+      type: 'vector',
+      url:  `mapbox://${TILESETS[key]}`
+    });
+
+    // Fill
+    map.addLayer({
+      id:             `${key}-fill`,
+      type:           'fill',
+      source:         key,
+      'source-layer': SOURCE_LAYERS[key],
+      layout: { visibility: 'none' },
+      paint: {
+        'fill-color':   COLORS[key],
+        'fill-opacity': 0.1
+      }
+    });
+
+    // Outline
+    map.addLayer({
+      id:             `${key}-line`,
+      type:           'line',
+      source:         key,
+      'source-layer': SOURCE_LAYERS[key],
+      layout: { visibility: 'none' },
+      paint: {
+        'line-color': COLORS[key],
+        'line-width': 1.5
+      }
+    });
+
+    // Label
+    map.addLayer({
+      id:             `${key}-label`,
+      type:           'symbol',
+      source:         key,
+      'source-layer': SOURCE_LAYERS[key],
+      layout: {
+        visibility:    'none',
+        'text-field':  ['get', NAME_FIELDS[key]],
+        'text-size':   11,
+        'text-font':   ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+        'text-anchor': 'center',
+        'text-max-width': 8
+      },
+      paint: {
+        'text-color':      COLORS[key],
+        'text-halo-color': 'rgba(255,253,241,0.9)',
+        'text-halo-width': 1.5
+      }
+    });
+
+    // Click popup
+    map.on('click', `${key}-fill`, (e) => {
+      const props = e.features[0].properties;
+      const name  = props[NAME_FIELDS[key]] || '—';
+      new mapboxgl.Popup({ offset: 8 })
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <div class="popup-name">${name}</div>
+          <div class="popup-type">${LAYER_LABELS[key]}</div>
+        `)
+        .addTo(map);
+    });
+
+    map.on('mouseenter', `${key}-fill`, () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', `${key}-fill`, () => {
+      map.getCanvas().style.cursor = '';
+    });
+  });
+
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  TOGGLE CONTROLS
+// ═══════════════════════════════════════════════════════════════════════
+
+const DISTRICT_KEYS = ['cityCouncil', 'countyBod', 'congressional', 'assembly', 'senate'];
+
+document.querySelectorAll('input[name="represent"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const selected = e.target.value;
+
+    // Update active highlight on label
+    document.querySelectorAll('.radio-option').forEach(opt => {
+      opt.classList.remove('active');
+    });
+    e.target.closest('.radio-option').classList.add('active');
+
+    // Show/hide layers
+    DISTRICT_KEYS.forEach(key => {
+      const vis = (key === selected) ? 'visible' : 'none';
+      ['fill', 'line', 'label'].forEach(type => {
+        const layerId = `${key}-${type}`;
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, 'visibility', vis);
+        }
+      });
+    });
+  });
+});
+
+// ── Panel collapse ─────────────────────────────────────────────────────
+
+const panelToggle = document.getElementById('panel-toggle');
+const panelBody   = document.getElementById('panel-body');
+const chevron     = document.getElementById('chevron');
+let   isCollapsed = false;
+
+// Auto-collapse on mobile
+if (window.innerWidth < 580) {
+  isCollapsed = true;
+  panelBody.classList.add('hidden');
+  chevron.classList.remove('up');
+}
+
+panelToggle.addEventListener('click', () => {
+  isCollapsed = !isCollapsed;
+  panelBody.classList.toggle('hidden', isCollapsed);
+  chevron.classList.toggle('up', !isCollapsed);
+});
+
+</script>
+</body>
+</html>
