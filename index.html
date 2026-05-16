@@ -308,7 +308,7 @@
 //  Fill in your token and source-layer names before deploying.
 // ═══════════════════════════════════════════════════════════════════════
 
-const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hhd25qcyIsImEiOiJjbXA4amU2ZTkwZDQ2MnhwdHpjbWFoMWQ4In0.J--HcwXZaW7o-30sDd2Aqw';
+const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN_HERE';
 
 // Your uploaded tileset IDs
 const TILESETS = {
@@ -323,23 +323,32 @@ const TILESETS = {
 // Source-layer names inside each tileset.
 // Find them in Mapbox Studio → Tilesets → click a tileset → scroll to "Layers" section.
 const SOURCE_LAYERS = {
-  nc:            'LA_Neighbhorhood_Council-4c7cvi', // confirmed from shapefile
-  cityCouncil:   'LA_City_Council-5ps0sb',
-  countyBod:     'LA_County_BoD-4yfvkt',
-  congressional: 'CA_Congressional-4tx61z',
-  assembly:      'CA_State_Assembly-1kblxw',
-  senate:        'CA_State_Senate-bnb84k'
+  nc:            'LA_City_Neighborhood_Councils', // confirmed from shapefile
+  cityCouncil:   'FILL_IN_FROM_STUDIO',
+  countyBod:     'FILL_IN_FROM_STUDIO',
+  congressional: 'FILL_IN_FROM_STUDIO',
+  assembly:      'FILL_IN_FROM_STUDIO',
+  senate:        'FILL_IN_FROM_STUDIO'
 };
 
-// The attribute field that holds the district's display name.
-// Check your data in Studio: click a tileset → "View data" tab shows feature properties.
-const NAME_FIELDS = {
-  nc:            'name',      // value: 'EAGLE ROCK NC'
-  cityCouncil:   'district',   // e.g. 'DISTRICT', 'NAME', 'CD'
-  countyBod:     'district',   // e.g. 'DISTRICT', 'NAME', 'SUPERVISOR'
-  congressional: 'district',   // e.g. 'NAMELSAD' if Census TIGER; check redistricting commission files
-  assembly:      'district',   // same note
-  senate:        'district'    // same note
+// Field used for the map label (shown on the polygon itself — keep short)
+const LABEL_FIELDS = {
+  nc:            'name',
+  cityCouncil:   'DISTRICT',
+  countyBod:     'District',
+  congressional: 'DISTRICT_L',
+  assembly:      'DISTRICT_L',
+  senate:        'DISTRICT_L'
+};
+
+// Field(s) used for the click popup. Pass an array to combine multiple fields.
+const POPUP_FIELDS = {
+  nc:            'name',
+  cityCouncil:   ['DISTRICT', 'MEMBER'],  // shows e.g. "District 14 · Council Member Name"
+  countyBod:     'TOOLTIP',               // pre-formatted string in the source data
+  congressional: 'DISTRICT_L',
+  assembly:      'DISTRICT_L',
+  senate:        'DISTRICT_L'
 };
 
 // Human-readable labels for popups
@@ -418,7 +427,7 @@ map.on('load', () => {
     type:           'fill',
     source:         'nc',
     'source-layer': SOURCE_LAYERS.nc,
-    filter:         ['==', ['get', NAME_FIELDS.nc], targetNC],
+    filter:         ['==', ['get', LABEL_FIELDS.nc], targetNC],
     paint: {
       'fill-color':   COLORS.nc,
       'fill-opacity': 0.12
@@ -431,7 +440,7 @@ map.on('load', () => {
     type:           'line',
     source:         'nc',
     'source-layer': SOURCE_LAYERS.nc,
-    filter:         ['==', ['get', NAME_FIELDS.nc], targetNC],
+    filter:         ['==', ['get', LABEL_FIELDS.nc], targetNC],
     paint: {
       'line-color': COLORS.nc,
       'line-width': 2.5
@@ -483,7 +492,7 @@ map.on('load', () => {
       'source-layer': SOURCE_LAYERS[key],
       layout: {
         visibility:    'none',
-        'text-field':  ['get', NAME_FIELDS[key]],
+        'text-field':  ['get', LABEL_FIELDS[key]],
         'text-size':   11,
         'text-font':   ['DIN Pro Medium', 'Arial Unicode MS Regular'],
         'text-anchor': 'center',
@@ -498,8 +507,11 @@ map.on('load', () => {
 
     // Click popup
     map.on('click', `${key}-fill`, (e) => {
-      const props = e.features[0].properties;
-      const name  = props[NAME_FIELDS[key]] || '—';
+      const props  = e.features[0].properties;
+      const field  = POPUP_FIELDS[key];
+      const name   = Array.isArray(field)
+        ? field.map(f => props[f]).filter(Boolean).join(' · ')
+        : (props[field] || '—');
       new mapboxgl.Popup({ offset: 8 })
         .setLngLat(e.lngLat)
         .setHTML(`
