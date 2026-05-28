@@ -277,13 +277,6 @@
         <span>County Supervisor</span>
       </label>
 
-      <label class="radio-option" for="r-congress">
-        <input type="radio" name="represent" id="r-congress" value="congressional"
-               style="--active-color: var(--congress);">
-        <span class="dot" style="background: var(--congress);"></span>
-        <span>US House</span>
-      </label>
-
       <label class="radio-option" for="r-assembly">
         <input type="radio" name="represent" id="r-assembly" value="assembly"
                style="--active-color: var(--assembly);">
@@ -296,6 +289,13 @@
                style="--active-color: var(--senate);">
         <span class="dot" style="background: var(--senate);"></span>
         <span>CA Senate</span>
+      </label>
+      
+      <label class="radio-option" for="r-congress">
+        <input type="radio" name="represent" id="r-congress" value="congressional"
+               style="--active-color: var(--congress);">
+        <span class="dot" style="background: var(--congress);"></span>
+        <span>US House</span>
       </label>
 
     </div>
@@ -334,13 +334,13 @@ const TILESETS = {
 // Source-layer names inside each tileset.
 // Find them in Mapbox Studio → Tilesets → click a tileset → scroll to "Layers" section.
 const SOURCE_LAYERS = {
-  nc:            'LA_City_Neighborhood_Councils',
+  nc:            'LA_Neighbhorhood_Council-4c7cvi',
   subdistricts:  'Eagle_Rock_NC_Shapefile-2i8wk6',
-  cityCouncil:   'FILL_IN_FROM_STUDIO',
-  countyBod:     'FILL_IN_FROM_STUDIO',
-  congressional: 'FILL_IN_FROM_STUDIO',
-  assembly:      'FILL_IN_FROM_STUDIO',
-  senate:        'FILL_IN_FROM_STUDIO'
+  cityCouncil:   'LA_City_Council-5ps0sb',
+  countyBod:     'LA_County_BoD-4yfvkt',
+  assembly:      'CA_State_Assembly-1kblxw',
+  senate:        'CA_State_Senate-bnb84k'
+  congressional: 'CA_Congressional-4tx61z',
 };
 
 // Field used for the map label (shown on the polygon itself — keep short)
