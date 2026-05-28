@@ -301,7 +301,7 @@ const TILESETS = {
   nc:            'shawnjs.947wac47',
   subdistricts:  'shawnjs.bho9281c',
   cityCouncil:   'shawnjs.a0l435xo',
-  countyBod:     'shawnjs.4pvm8v63',
+  countyBod:     'shawnjs.bp7khkbi',
   assembly:      'shawnjs.1or4vwo2',
   senate:        'shawnjs.4o0qoysq',
   congressional: 'shawnjs.27u0lrb5'
@@ -311,7 +311,7 @@ const SOURCE_LAYERS = {
   nc:            'LA_Neighbhorhood_Council-4c7cvi',
   subdistricts:  'Eagle_Rock_NC_Shapefile-2i8wk6',
   cityCouncil:   'LA_City_Council-5ps0sb',
-  countyBod:     'Supervisorial_Districts_Curre-9l6ban',
+  countyBod:     'LA_County_BoD-4yfvkt',
   assembly:      'CA_State_Assembly-1kblxw',
   senate:        'CA_State_Senate-bnb84k',
   congressional: 'CA_Congressional-4tx61z'
@@ -340,10 +340,33 @@ const POPUP_FIELDS = {
 const LAYER_LABELS = {
   subdistricts:  'ERNC Subdistrict',
   cityCouncil:   'LA City Council',
-  countyBod:     'LA County Supervisor',
-  assembly:      'CA Assembly',
-  senate:        'CA Senate',
-  congressional: 'US House'
+  countyBod:     'LA County Board of Supervisors',
+  assembly:      'CA State Assembly',
+  senate:        'CA State Senate',
+  congressional: 'US House of Representatives'
+};
+
+// District numbers that overlap with ERNC — used to filter out non-relevant polygons.
+// City Council: numeric field. All others: string field.
+// If a district layer shows no polygons, the DISTRICT field values in your tileset
+// may be formatted differently (e.g. "AD-52" vs "52") — check Studio and adjust here.
+const DISTRICT_FILTERS = {
+  cityCouncil:   [1, 14],     // numeric — Districts 1 and 14
+  countyBod:     ['1'],       // string — District 1
+  assembly:      ['52'],      // string — AD-52
+  senate:        ['26'],      // string — SD-26
+  congressional: ['34']       // string — CA-34
+};
+
+// Rep names keyed by district number (as stored in the DISTRICT field).
+// Update these when elections change representation.
+// Hilda Solis (County District 1) is termed out in 2026 — update after November election.
+const REPS = {
+  cityCouncil:   { 14: 'Ysabel Jurado',       1: 'Eunisses Hernandez' },
+  countyBod:     { '1': 'Hilda Solis'         },
+  assembly:      { '52': 'Jessica Caloza'     },
+  senate:        { '26': 'Maria Elena Durazo' },
+  congressional: { '34': 'Jimmy Gomez'        }
 };
 
 const COLORS = {
@@ -466,12 +489,20 @@ map.on('load', () => {
 
   DISTRICT_KEYS.forEach(key => {
     const defaultVis = 'none';
+    const filterVals = DISTRICT_FILTERS[key];
+
+    // Build a Mapbox filter expression to show only districts overlapping ERNC.
+    // City Council uses a numeric DISTRICT field; others use string.
+    const districtFilter = typeof filterVals[0] === 'number'
+      ? ['in', ['get', 'DISTRICT'], ['literal', filterVals]]
+      : ['in', ['get', 'DISTRICT'], ['literal', filterVals]];
 
     map.addSource(key, { type: 'vector', url: `mapbox://${TILESETS[key]}` });
 
     map.addLayer({
       id: `${key}-fill`, type: 'fill', source: key,
       'source-layer': SOURCE_LAYERS[key],
+      filter: districtFilter,
       layout: { visibility: defaultVis },
       paint: { 'fill-color': COLORS[key], 'fill-opacity': 0.1 }
     });
@@ -479,6 +510,7 @@ map.on('load', () => {
     map.addLayer({
       id: `${key}-line`, type: 'line', source: key,
       'source-layer': SOURCE_LAYERS[key],
+      filter: districtFilter,
       layout: { visibility: defaultVis },
       paint: { 'line-color': COLORS[key], 'line-width': 1.5 }
     });
@@ -486,6 +518,7 @@ map.on('load', () => {
     map.addLayer({
       id: `${key}-label`, type: 'symbol', source: key,
       'source-layer': SOURCE_LAYERS[key],
+      filter: districtFilter,
       layout: {
         visibility: defaultVis,
         'text-field': ['get', LABEL_FIELDS[key]],
@@ -507,17 +540,19 @@ map.on('load', () => {
 
   function addPopup(key) {
     map.on('click', `${key}-fill`, (e) => {
-      const props = e.features[0].properties;
-      const field = POPUP_FIELDS[key];
-      const name  = Array.isArray(field)
-        ? field.map(f => props[f]).filter(Boolean).join(' · ')
-        : (props[field] || '—');
+      const props    = e.features[0].properties;
+      const distNum  = props['DISTRICT'] ?? props['District'] ?? '—';
+      const repName  = (REPS[key] && REPS[key][distNum]) ? REPS[key][distNum] : null;
+      const distLine = repName
+        ? `District ${distNum} &middot; ${repName}`
+        : `District ${distNum}`;
+
       new mapboxgl.Popup({ offset: 8 })
         .setLngLat(e.lngLat)
         .setHTML(`
           <div class="popup-inner">
             <div class="popup-type" style="color:${COLORS[key]}">${LAYER_LABELS[key]}</div>
-            <div class="popup-name">${name}</div>
+            <div class="popup-name">${distLine}</div>
           </div>`)
         .addTo(map);
     });
