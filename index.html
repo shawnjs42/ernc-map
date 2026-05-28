@@ -258,9 +258,9 @@
 
       <label class="radio-option active" for="r-none">
         <input type="radio" name="represent" id="r-none" value="none" checked
-               style="--active-color: #ed4a39;">
-        <span class="dot" style="background:#f4e4e0; border:1px solid #ed4a39;"></span>
-        <span>ERNC Boundary Only</span>
+               style="--active-color: #555;">
+        <span class="dot" style="background:#ddd; border:1px solid #bbb;"></span>
+        <span>None</span>
       </label>
 
       <label class="radio-option" for="r-city">
@@ -299,6 +299,16 @@
       </label>
 
     </div>
+
+    <!-- ERNC Subdistricts -->
+    <div class="section-title" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">ERNC Subdistricts</div>
+    <label class="radio-option" id="sub-toggle" style="cursor:pointer;">
+      <input type="checkbox" id="cb-subdistricts"
+             style="width:13px;height:13px;accent-color:var(--subdistricts);flex-shrink:0;cursor:pointer;">
+      <span class="dot" style="background:var(--subdistricts);"></span>
+      <span style="font-size:0.78rem;color:var(--charcoal);">Show Subdistricts</span>
+    </label>
+
   </div>
 </div>
 
@@ -308,11 +318,12 @@
 //  Fill in your token and source-layer names before deploying.
 // ═══════════════════════════════════════════════════════════════════════
 
-const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hhd25qcyIsImEiOiJjbXA4amU2ZTkwZDQ2MnhwdHpjbWFoMWQ4In0.J--HcwXZaW7o-30sDd2Aqw';
+const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN_HERE';
 
 // Your uploaded tileset IDs
 const TILESETS = {
   nc:            'shawnjs.947wac47',
+  subdistricts:  'shawnjs.bho9281c',
   cityCouncil:   'shawnjs.a0l435xo',
   countyBod:     'shawnjs.bp7khkbi',
   congressional: 'shawnjs.27u0lrb5',
@@ -323,17 +334,19 @@ const TILESETS = {
 // Source-layer names inside each tileset.
 // Find them in Mapbox Studio → Tilesets → click a tileset → scroll to "Layers" section.
 const SOURCE_LAYERS = {
-  nc:            'LA_Neighbhorhood_Council-4c7cvi', // confirmed from shapefile
-  cityCouncil:   'LA_City_Council-5ps0sb',
-  countyBod:     'LA_County_BoD-4yfvkt',
-  congressional: 'CA_Congressional-4tx61z',
-  assembly:      'CA_State_Assembly-1kblxw',
-  senate:        'CA_State_Senate-bnb84k'
+  nc:            'LA_City_Neighborhood_Councils',
+  subdistricts:  'Eagle_Rock_NC_Shapefile-2i8wk6',
+  cityCouncil:   'FILL_IN_FROM_STUDIO',
+  countyBod:     'FILL_IN_FROM_STUDIO',
+  congressional: 'FILL_IN_FROM_STUDIO',
+  assembly:      'FILL_IN_FROM_STUDIO',
+  senate:        'FILL_IN_FROM_STUDIO'
 };
 
 // Field used for the map label (shown on the polygon itself — keep short)
 const LABEL_FIELDS = {
   nc:            'name',
+  subdistricts:  'NAME',
   cityCouncil:   'DISTRICT',
   countyBod:     'District',
   congressional: 'DISTRICT_L',
@@ -344,15 +357,17 @@ const LABEL_FIELDS = {
 // Field(s) used for the click popup. Pass an array to combine multiple fields.
 const POPUP_FIELDS = {
   nc:            'name',
+  subdistricts:  'NAME',
   cityCouncil:   ['DISTRICT', 'MEMBER'],  // shows e.g. "District 14 · Council Member Name"
   countyBod:     'TOOLTIP',               // pre-formatted string in the source data
-  congressional: 'NAME',
-  assembly:      'NAME',
-  senate:        'NAME'
+  congressional: 'DISTRICT_L',
+  assembly:      'DISTRICT_L',
+  senate:        'DISTRICT_L'
 };
 
 // Human-readable labels for popups
 const LAYER_LABELS = {
+  subdistricts:  'ERNC Subdistrict',
   cityCouncil:   'LA City Council District',
   countyBod:     'LA County Supervisorial District',
   congressional: 'US House District',
@@ -363,6 +378,7 @@ const LAYER_LABELS = {
 // Colors (match CSS variables above)
 const COLORS = {
   nc:            '#E84E38',
+  subdistricts:  '#155e14',
   cityCouncil:   '#2563EB',
   countyBod:     '#7C3AED',
   congressional: '#b91c1c',
@@ -446,6 +462,73 @@ map.on('load', () => {
       'line-width': 2.5
     }
   });
+
+  // ── Subdistricts (hidden by default, toggled via checkbox) ─────────────
+
+  map.addSource('subdistricts', {
+    type: 'vector',
+    url:  `mapbox://${TILESETS.subdistricts}`
+  });
+
+  map.addLayer({
+    id:             'subdistricts-fill',
+    type:           'fill',
+    source:         'subdistricts',
+    'source-layer': SOURCE_LAYERS.subdistricts,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color':   COLORS.subdistricts,
+      'fill-opacity': 0.1
+    }
+  });
+
+  map.addLayer({
+    id:             'subdistricts-line',
+    type:           'line',
+    source:         'subdistricts',
+    'source-layer': SOURCE_LAYERS.subdistricts,
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': COLORS.subdistricts,
+      'line-width': 1.5,
+      'line-dasharray': [3, 2]
+    }
+  });
+
+  map.addLayer({
+    id:             'subdistricts-label',
+    type:           'symbol',
+    source:         'subdistricts',
+    'source-layer': SOURCE_LAYERS.subdistricts,
+    layout: {
+      visibility:       'none',
+      'text-field':     ['get', LABEL_FIELDS.subdistricts],
+      'text-size':      11,
+      'text-font':      ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-anchor':    'center',
+      'text-max-width': 8
+    },
+    paint: {
+      'text-color':      COLORS.subdistricts,
+      'text-halo-color': 'rgba(255,253,241,0.9)',
+      'text-halo-width': 1.5
+    }
+  });
+
+  map.on('click', 'subdistricts-fill', (e) => {
+    const props = e.features[0].properties;
+    const name  = props[POPUP_FIELDS.subdistricts] || '—';
+    new mapboxgl.Popup({ offset: 8 })
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <div class="popup-name">${name}</div>
+        <div class="popup-type">${LAYER_LABELS.subdistricts}</div>
+      `)
+      .addTo(map);
+  });
+
+  map.on('mouseenter', 'subdistricts-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'subdistricts-fill', () => { map.getCanvas().style.cursor = ''; });
 
   // ── District layers (all hidden by default) ──────────────────────────
 
@@ -557,6 +640,18 @@ document.querySelectorAll('input[name="represent"]').forEach(radio => {
         }
       });
     });
+  });
+});
+
+// ── Subdistrict checkbox ──────────────────────────────────────────────────
+
+document.getElementById('cb-subdistricts').addEventListener('change', (e) => {
+  const vis = e.target.checked ? 'visible' : 'none';
+  ['fill', 'line', 'label'].forEach(type => {
+    const layerId = `subdistricts-${type}`;
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, 'visibility', vis);
+    }
   });
 });
 
