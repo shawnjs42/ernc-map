@@ -185,7 +185,26 @@
     .mapboxgl-ctrl-top-left { top: 12px; left: 12px; }
 
     @media (max-width: 580px) {
-      #controls { top: auto; bottom: 36px; right: 8px; left: 8px; width: auto; }
+      #controls {
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        border-radius: 14px 14px 0 0;
+        max-height: 60vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .panel-header {
+        border-radius: 14px 14px 0 0;
+        padding: 14px 18px;
+      }
+      .panel-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 24px;
+      }
     }
   </style>
 </head>
@@ -537,10 +556,12 @@ document.querySelectorAll('input[name="represent"]').forEach(radio => {
 const panelToggle = document.getElementById('panel-toggle');
 const panelBody   = document.getElementById('panel-body');
 const chevron     = document.getElementById('chevron');
-let isCollapsed   = false;
 
-if (window.innerWidth < 580) {
-  isCollapsed = true;
+// Collapse on mobile — check both innerWidth and screen width to handle iframes
+const isMobile = window.innerWidth < 580 || screen.width < 640;
+let isCollapsed = isMobile;
+
+if (isCollapsed) {
   panelBody.classList.add('hidden');
   chevron.classList.remove('up');
 }
