@@ -360,6 +360,12 @@ const DEFAULT_NC     = 'EAGLE ROCK NC';
 const DEFAULT_CENTER = [-118.2077, 34.1366];
 const DEFAULT_ZOOM   = 13.2;
 
+// Bounding box of the ERNC polygon — used to fitBounds on mobile
+const ERNC_BOUNDS = [
+  [-118.2296, 34.1163],  // southwest [lng, lat]
+  [-118.1804, 34.1517]   // northeast [lng, lat]
+];
+
 // ═══════════════════════════════════════════════════════════════════
 //  MAP INIT
 // ═══════════════════════════════════════════════════════════════════
@@ -383,6 +389,11 @@ map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left
 // ═══════════════════════════════════════════════════════════════════
 
 map.on('load', () => {
+
+  // Fit full ERNC polygon into view on mobile
+  if (isMobile) {
+    map.fitBounds(ERNC_BOUNDS, { padding: 24, duration: 0 });
+  }
 
   // ── NC boundary ────────────────────────────────────────────────
 
